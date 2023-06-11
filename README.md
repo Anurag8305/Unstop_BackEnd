@@ -13,7 +13,7 @@ https://dark-pear-bunny-gear.cyclic.app/
 <p>1. Clone the repo</p>
 
 ```
-git clone https://github.com/abhayfaldu/faded-kick-2555.git
+git clone https://github.com/Anurag8305/Unstop_BackEnd.git
 ```
 
 <p>2. Install NPM packages</p>
