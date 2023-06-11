@@ -1,29 +1,29 @@
 const express = require("express");
+require("dotenv").config();
 const { coachModel } = require("../Model/newCoachModel");
 
-
-const ticketRouter = express.Router();
+const seatRouter = express.Router();
 
 //get all ticket for displaying
-ticketRouter.get("/ticket", async (req, res) => {
+seatRouter.get("/ticket", async (req, res) => {
 	const bookingDetails = await coachModel.find();
 	res.send(bookingDetails[0].coach);
 });
 
-//after getting userinput book ticket
-
-ticketRouter.post("/ticket", async (req, res) => {
+//after getting userinput this route initiates the book ticket process
+seatRouter.post("/ticket", async (req, res) => {
 	let requestedBooking = req.body.number_of_seats;
 	let seatStructure = await coachModel.find();
-	console.log(seatStructure[0]._id)
+	const emptySeats = await coachModel.findOne({ "coach.status": true });
+	console.log("emptySeats", emptySeats);
 	let id = seatStructure[0]._id;
 	seatStructure = seatStructure[0].coach;
-
 	const seatsInRow = 7;
 	const lastRowSeats = 3;
 	const totalRows = 12;
 	const seatLayout = seatStructure;
 
+	// function to check available seats
 	function seatsAvailableInRow(row, numOfSeats) {
 		for (let i = 0; i <= seatsInRow - numOfSeats; i++) {
 			let available = true;
@@ -40,17 +40,18 @@ ticketRouter.post("/ticket", async (req, res) => {
 		return -1;
 	}
 
-	// Function to reserve seats
+	// Function to book the seats
 	async function reserveSeats(numOfSeats) {
+		const coach = await coachModel.findOne({ "coach.status": false });
+		console.log("coach", coach);
 		if (+numOfSeats > seatsInRow) {
 			res.send({ seat: "Cannot reserve more than 7 seats at a time." });
 			return;
 		}
-
 		let row = -1;
 		let seatIndex = -1;
 
-		// Look for available seats in one row
+		//  Checking seat in existing row
 		for (let i = 0; i < 12; i++) {
 			const availableSeatIndex = seatsAvailableInRow(i, +numOfSeats);
 			if (availableSeatIndex !== -1) {
@@ -60,21 +61,19 @@ ticketRouter.post("/ticket", async (req, res) => {
 			}
 		}
 
-		// If seats are not available in one row, book in nearby rows
+		//  Checking seat in existing row else finding it in the nearby adjacent ones
 		if (row === -1) {
 			for (let i = 0; i < 12; i++) {
 				const availableSeatIndex = seatsAvailableInRow(i, numOfSeats);
 				if (availableSeatIndex !== -1) {
 					row = i;
 					seatIndex = availableSeatIndex;
-
 					break;
 				}
 			}
 		}
 
-		// Reserve the seats
-
+		// booking the seats
 		if (row !== -1 && seatIndex !== -1) {
 			const reservedSeats = [];
 			const reservedSeatsNum = [];
@@ -86,7 +85,7 @@ ticketRouter.post("/ticket", async (req, res) => {
 			console.log(
 				`Successfully reserved ${numOfSeats} seats: ${reservedSeats.join(", ")}`
 			);
-			//updating seat status in coach
+			//updating seat status of those which are booked
 			await coachModel.findByIdAndUpdate({ _id: id }, { coach: seatLayout });
 			res.send({
 				seat: `Successfully reserved ${numOfSeats} seat, seats Number: ${reservedSeatsNum.join(
@@ -94,15 +93,39 @@ ticketRouter.post("/ticket", async (req, res) => {
 				)}`,
 			});
 		} else {
-			console.log("No seats available.");
+			res.send("No seats available.");
 		}
 	}
 	reserveSeats(+requestedBooking);
 });
 
-//setting up new coach
+// updating all the booked seats and creating newly unbooked seats for using again
+seatRouter.get("/delete", async (req, res) => {
+	const updatedData = [
+		new Array(7).fill(false),
+		new Array(7).fill(false),
+		new Array(7).fill(false),
+		new Array(7).fill(false),
+		new Array(7).fill(false),
+		new Array(7).fill(false),
+		new Array(7).fill(false),
+		new Array(7).fill(false),
+		new Array(7).fill(false),
+		new Array(7).fill(false),
+		new Array(7).fill(false),
+		new Array(3).fill(false),
+	];
+	let seatStructure = await coachModel.find();
+	let id = seatStructure[0]._id;
+	const updateData = async (id, updatedData) => {
+		await coachModel.findByIdAndUpdate({ _id: id }, { coach: updatedData });
+		res.send("Successfully Updated");
+	};
+	updateData(id, updatedData);
+});
 
-ticketRouter.get("/coach", async (req, res) => {
+//creating  new seats for the forst time to set MOngoDb collection
+seatRouter.get("/coach", async (req, res) => {
 	const coach = new coachModel({
 		coach: [
 			new Array(7).fill(false),
@@ -123,4 +146,4 @@ ticketRouter.get("/coach", async (req, res) => {
 	await coach.save();
 	res.send("new Coach added");
 });
-module.exports = { ticketRouter };
+module.exports = { seatRouter };
