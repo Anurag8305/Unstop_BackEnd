@@ -15,7 +15,6 @@ seatRouter.post("/ticket", async (req, res) => {
 	let requestedBooking = req.body.number_of_seats;
 	let seatStructure = await coachModel.find();
 	const emptySeats = await coachModel.findOne({ "coach.status": true });
-	console.log("emptySeats", emptySeats);
 	let id = seatStructure[0]._id;
 	seatStructure = seatStructure[0].coach;
 	const seatsInRow = 7;
@@ -43,7 +42,6 @@ seatRouter.post("/ticket", async (req, res) => {
 	// Function to book the seats
 	async function reserveSeats(numOfSeats) {
 		const coach = await coachModel.findOne({ "coach.status": false });
-		console.log("coach", coach);
 		if (+numOfSeats > seatsInRow) {
 			res.send({ seat: "Cannot reserve more than 7 seats at a time." });
 			return;
@@ -80,15 +78,20 @@ seatRouter.post("/ticket", async (req, res) => {
 			for (let i = seatIndex; i < seatIndex + numOfSeats; i++) {
 				seatLayout[row][i] = true;
 				reservedSeats.push(`Row ${row + 1}, Seat ${i + 1}`);
+				// reservedSeatsNum.push(row * 7 + i + 1);
 				reservedSeatsNum.push(row * 7 + i + 1);
 			}
 			console.log(
-				`Successfully reserved ${numOfSeats} seats: ${reservedSeats.join(", ")}`
+				`1. Successfully reserved ${numOfSeats} seats: ${reservedSeats.join(
+					", "
+				)}`
 			);
+
 			//updating seat status of those which are booked
 			await coachModel.findByIdAndUpdate({ _id: id }, { coach: seatLayout });
+
 			res.send({
-				seat: `Successfully reserved ${numOfSeats} seat, seats Number: ${reservedSeatsNum.join(
+				seat: `Successfully reserved ${numOfSeats} seat, seats Number: ${reservedSeats.join(
 					", "
 				)}`,
 			});
